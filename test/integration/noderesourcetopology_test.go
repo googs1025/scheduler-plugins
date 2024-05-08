@@ -144,19 +144,20 @@ func TestTopologyMatchPlugin(t *testing.T) {
 	testCtx.ClientSet = cs
 	testCtx.KubeConfig = globalKubeConfig
 
-	if err := wait.Poll(100*time.Millisecond, 3*time.Second, func() (done bool, err error) {
-		groupList, _, err := cs.ServerGroupsAndResources()
-		if err != nil {
-			return false, nil
-		}
-		for _, group := range groupList {
-			if group.Name == "topology.node.k8s.io" {
-				t.Log("The CRD is ready to serve")
-				return true, nil
+	if err := wait.PollUntilContextTimeout(testCtx.Ctx, 100*time.Millisecond, 3*time.Second,
+		false, func(ctx context.Context) (done bool, err error) {
+			groupList, _, err := cs.ServerGroupsAndResources()
+			if err != nil {
+				return false, nil
 			}
-		}
-		return false, nil
-	}); err != nil {
+			for _, group := range groupList {
+				if group.Name == "topology.node.k8s.io" {
+					t.Log("The CRD is ready to serve")
+					return true, nil
+				}
+			}
+			return false, nil
+		}); err != nil {
 		t.Fatalf("Timed out waiting for CRD to be ready: %v", err)
 	}
 
@@ -1984,10 +1985,11 @@ func TestTopologyMatchPlugin(t *testing.T) {
 			for _, p := range tt.pods {
 				if len(tt.expectedNodes) > 0 {
 					// Wait for the pod to be scheduled.
-					if err := wait.Poll(1*time.Second, 20*time.Second, func() (bool, error) {
-						return podScheduled(cs, ns, p.Name), nil
+					if err := wait.PollUntilContextTimeout(testCtx.Ctx, 1*time.Second, 20*time.Second,
+						false, func(ctx context.Context) (bool, error) {
+							return podScheduled(cs, ns, p.Name), nil
 
-					}); err != nil {
+						}); err != nil {
 						t.Errorf("pod %q to be scheduled, error: %v", p.Name, err)
 					}
 
@@ -2008,22 +2010,23 @@ func TestTopologyMatchPlugin(t *testing.T) {
 					// wait for the pod scheduling to failed.
 					var err error
 					var events []v1.Event
-					if err := wait.Poll(5*time.Second, 20*time.Second, func() (bool, error) {
-						events, err = getPodEvents(cs, ns, p.Name)
-						if err != nil {
-							// This could be a connection error, so we want to retry.
-							klog.ErrorS(err, "Failed check pod scheduling status for pod", "pod", klog.KRef(ns, p.Name))
-							return false, nil
-						}
-						candidateEvents := filterPodFailedSchedulingEvents(events)
-						for _, ce := range candidateEvents {
-							if strings.Contains(ce.Message, tt.errMsg) {
-								return true, nil
+					if err := wait.PollUntilContextTimeout(testCtx.Ctx, 5*time.Second, 20*time.Second,
+						false, func(ctx context.Context) (bool, error) {
+							events, err = getPodEvents(cs, ns, p.Name)
+							if err != nil {
+								// This could be a connection error, so we want to retry.
+								klog.ErrorS(err, "Failed check pod scheduling status for pod", "pod", klog.KRef(ns, p.Name))
+								return false, nil
 							}
-							klog.Warningf("Pod failed but error message does not contain substring: %q; got %q instead", tt.errMsg, ce.Message)
-						}
-						return false, nil
-					}); err != nil {
+							candidateEvents := filterPodFailedSchedulingEvents(events)
+							for _, ce := range candidateEvents {
+								if strings.Contains(ce.Message, tt.errMsg) {
+									return true, nil
+								}
+								klog.Warningf("Pod failed but error message does not contain substring: %q; got %q instead", tt.errMsg, ce.Message)
+							}
+							return false, nil
+						}); err != nil {
 						// we need more context to troubleshoot, but let's not clutter the actual error
 						t.Logf("pod %q scheduling should failed with error: %v got %v events:\n%s", p.Name, tt.errMsg, err, formatEvents(events))
 						t.Errorf("pod %q scheduling should failed, error: %v", p.Name, err)

@@ -216,28 +216,30 @@ func TestPreemptionTolerationPlugin(t *testing.T) {
 			if victimCandidate, err = cs.CoreV1().Pods(ns).Create(testCtx.Ctx, victimCandidate, metav1.CreateOptions{}); err != nil {
 				t.Fatalf("failed to create victim candidate pod %q: %v", victimCandidate.Name, err)
 			}
-			if err := wait.Poll(1*time.Second, 60*time.Second, func() (bool, error) {
-				return podScheduled(cs, ns, victimCandidate.Name), nil
-			}); err != nil {
+			if err := wait.PollUntilContextTimeout(testCtx.Ctx, 1*time.Second, 60*time.Second,
+				false, func(ctx context.Context) (bool, error) {
+					return podScheduled(cs, ns, victimCandidate.Name), nil
+				}); err != nil {
 				t.Fatalf("victim candidate pod %q failed to be scheduled: %v", victimCandidate.Name, err)
 			}
 			// simulate pod scheduled time
-			if err := wait.Poll(1*time.Second, 60*time.Second, func() (bool, error) {
-				vc, err := cs.CoreV1().Pods(ns).Get(testCtx.Ctx, victimCandidate.Name, metav1.GetOptions{})
-				if err != nil {
-					return false, err
-				}
-				vc.Status.Conditions = []v1.PodCondition{{
-					Type:               v1.PodScheduled,
-					Status:             v1.ConditionTrue,
-					LastTransitionTime: metav1.Time{Time: time.Now().Add(-1 * tt.simulateVictimScheduledBefore)},
-				}}
-				_, err = cs.CoreV1().Pods(ns).UpdateStatus(testCtx.Ctx, vc, metav1.UpdateOptions{})
-				if err != nil {
-					return false, err
-				}
-				return true, nil
-			}); err != nil {
+			if err := wait.PollUntilContextTimeout(testCtx.Ctx, 1*time.Second, 60*time.Second,
+				false, func(ctx context.Context) (bool, error) {
+					vc, err := cs.CoreV1().Pods(ns).Get(ctx, victimCandidate.Name, metav1.GetOptions{})
+					if err != nil {
+						return false, err
+					}
+					vc.Status.Conditions = []v1.PodCondition{{
+						Type:               v1.PodScheduled,
+						Status:             v1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: time.Now().Add(-1 * tt.simulateVictimScheduledBefore)},
+					}}
+					_, err = cs.CoreV1().Pods(ns).UpdateStatus(testCtx.Ctx, vc, metav1.UpdateOptions{})
+					if err != nil {
+						return false, err
+					}
+					return true, nil
+				}); err != nil {
 				t.Fatalf("failed to update victim candidate pod %q scheduled time: %v", victimCandidate.Name, err)
 			}
 
@@ -266,9 +268,10 @@ func TestPreemptionTolerationPlugin(t *testing.T) {
 			} else {
 				// - the preemptor pod got scheduled successfully
 				// - the victim pod does not exist (preempted)
-				if err := wait.Poll(1*time.Second, 30*time.Second, func() (bool, error) {
-					return podScheduled(cs, ns, tt.preemptor.Name) && util.PodNotExist(cs, ns, victimCandidate.Name), nil
-				}); err != nil {
+				if err := wait.PollUntilContextTimeout(testCtx.Ctx, 1*time.Second, 30*time.Second,
+					false, func(ctx context.Context) (bool, error) {
+						return podScheduled(cs, ns, tt.preemptor.Name) && util.PodNotExist(cs, ns, victimCandidate.Name), nil
+					}); err != nil {
 					t.Fatalf("preemptor pod %q failed to be scheduled: %v", tt.preemptor.Name, err)
 				}
 			}

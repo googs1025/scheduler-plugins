@@ -65,35 +65,37 @@ func TestNetworkOverheadPlugin(t *testing.T) {
 	testCtx.ClientSet = cs
 	testCtx.KubeConfig = globalKubeConfig
 
-	if err := wait.Poll(100*time.Millisecond, 3*time.Second, func() (done bool, err error) {
-		groupList, _, err := cs.ServerGroupsAndResources()
-		if err != nil {
-			return false, nil
-		}
-		for _, group := range groupList {
-			if group.Name == appgroupapi.GroupName {
-				t.Log("The AppGroup CRD is ready to serve")
-				return true, nil
+	if err := wait.PollUntilContextTimeout(testCtx.Ctx, 100*time.Millisecond, 3*time.Second,
+		false, func(ctx context.Context) (done bool, err error) {
+			groupList, _, err := cs.ServerGroupsAndResources()
+			if err != nil {
+				return false, nil
 			}
-		}
-		return false, nil
-	}); err != nil {
+			for _, group := range groupList {
+				if group.Name == appgroupapi.GroupName {
+					t.Log("The AppGroup CRD is ready to serve")
+					return true, nil
+				}
+			}
+			return false, nil
+		}); err != nil {
 		t.Fatalf("Timed out waiting for AppGroup CRD to be ready: %v", err)
 	}
 
-	if err := wait.Poll(100*time.Millisecond, 3*time.Second, func() (done bool, err error) {
-		groupList, _, err := cs.ServerGroupsAndResources()
-		if err != nil {
-			return false, nil
-		}
-		for _, group := range groupList {
-			if group.Name == ntapi.GroupName {
-				t.Log("The NetworkTopology CRD is ready to serve")
-				return true, nil
+	if err := wait.PollUntilContextTimeout(testCtx.Ctx, 100*time.Millisecond, 3*time.Second,
+		false, func(ctx context.Context) (done bool, err error) {
+			groupList, _, err := cs.ServerGroupsAndResources()
+			if err != nil {
+				return false, nil
 			}
-		}
-		return false, nil
-	}); err != nil {
+			for _, group := range groupList {
+				if group.Name == ntapi.GroupName {
+					t.Log("The NetworkTopology CRD is ready to serve")
+					return true, nil
+				}
+			}
+			return false, nil
+		}); err != nil {
 		t.Fatalf("Timed out waiting for Network Topology CRD to be ready: %v", err)
 	}
 
@@ -279,10 +281,11 @@ func TestNetworkOverheadPlugin(t *testing.T) {
 			for _, p := range tt.pods {
 				if len(tt.expectedNodes) > 0 {
 					// Wait for the pod to be scheduled.
-					if err := wait.Poll(1*time.Second, 20*time.Second, func() (bool, error) {
-						return podScheduled(cs, ns, p.Name), nil
+					if err := wait.PollUntilContextTimeout(testCtx.Ctx, 1*time.Second, 20*time.Second,
+						false, func(ctx context.Context) (bool, error) {
+							return podScheduled(cs, ns, p.Name), nil
 
-					}); err != nil {
+						}); err != nil {
 						t.Errorf("pod %q to be scheduled, error: %v", p.Name, err)
 					}
 

@@ -183,9 +183,10 @@ func TestLoadVariationRiskBalancingPlugin(t *testing.T) {
 
 	expected := [2]string{"node-1", "node-1"}
 	for i := range newPods {
-		err := wait.Poll(1*time.Second, 10*time.Second, func() (bool, error) {
-			return podScheduled(cs, newPods[i].Namespace, newPods[i].Name), nil
-		})
+		err := wait.PollUntilContextTimeout(testCtx.Ctx, 1*time.Second, 10*time.Second,
+			false, func(ctx context.Context) (bool, error) {
+				return podScheduled(cs, newPods[i].Namespace, newPods[i].Name), nil
+			})
 		assert.Nil(t, err)
 
 		pod, err := cs.CoreV1().Pods(ns).Get(testCtx.Ctx, newPods[i].Name, metav1.GetOptions{})

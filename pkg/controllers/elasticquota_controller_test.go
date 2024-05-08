@@ -203,25 +203,25 @@ func TestElasticQuotaController_Run(t *testing.T) {
 					t.Errorf("reconcile: (%v)", err)
 				}
 			}
-
-			err := wait.Poll(200*time.Millisecond, 1*time.Second, func() (done bool, err error) {
-				for _, v := range c.want {
-					eq := &v1alpha1.ElasticQuota{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      v.Name,
-							Namespace: v.Namespace,
-						},
+			err := wait.PollUntilContextTimeout(ctx, 200*time.Millisecond, 1*time.Second,
+				false, func(ctx context.Context) (done bool, err error) {
+					for _, v := range c.want {
+						eq := &v1alpha1.ElasticQuota{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v.Name,
+								Namespace: v.Namespace,
+							},
+						}
+						err := kClient.Get(ctx, client.ObjectKeyFromObject(eq), eq)
+						if err != nil {
+							return false, err
+						}
+						if !quota.Equals(eq.Status.Used, v.Status.Used) {
+							return false, fmt.Errorf("%v: want %v, got %v", c.name, v.Status.Used, eq.Status.Used)
+						}
 					}
-					err := kClient.Get(ctx, client.ObjectKeyFromObject(eq), eq)
-					if err != nil {
-						return false, err
-					}
-					if !quota.Equals(eq.Status.Used, v.Status.Used) {
-						return false, fmt.Errorf("%v: want %v, got %v", c.name, v.Status.Used, eq.Status.Used)
-					}
-				}
-				return true, nil
-			})
+					return true, nil
+				})
 			if err != nil {
 				klog.ErrorS(err, "Elastic Quota Test Failed")
 				os.Exit(1)

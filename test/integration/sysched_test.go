@@ -143,19 +143,20 @@ func TestSyschedPlugin(t *testing.T) {
 	testCtx.ClientSet = cs
 	testCtx.KubeConfig = globalKubeConfig
 
-	if err := wait.Poll(100*time.Millisecond, 3*time.Second, func() (done bool, err error) {
-		groupList, _, err := cs.ServerGroupsAndResources()
-		if err != nil {
-			return false, nil
-		}
-		for _, group := range groupList {
-			if group.Name == "security-profiles-operator.x-k8s.io" {
-				t.Log("The CRD is ready to serve")
-				return true, nil
+	if err := wait.PollUntilContextTimeout(testCtx.Ctx, 100*time.Millisecond, 3*time.Second,
+		false, func(ctx context.Context) (done bool, err error) {
+			groupList, _, err := cs.ServerGroupsAndResources()
+			if err != nil {
+				return false, nil
 			}
-		}
-		return false, nil
-	}); err != nil {
+			for _, group := range groupList {
+				if group.Name == "security-profiles-operator.x-k8s.io" {
+					t.Log("The CRD is ready to serve")
+					return true, nil
+				}
+			}
+			return false, nil
+		}); err != nil {
 		t.Fatalf("Timed out waiting for CRD to be ready: %v", err)
 	}
 
@@ -253,12 +254,13 @@ func TestSyschedPlugin(t *testing.T) {
 			t.Fatalf("Failed to create Pod %q: %v", pods[i].Name, err)
 		}
 		// Wait for all Pods to be scheduled.
-		err = wait.Poll(time.Millisecond*20, wait.ForeverTestTimeout, func() (bool, error) {
-			if !podScheduled(cs, pods[i].Namespace, pods[i].Name) {
-				return false, nil
-			}
-			return true, nil
-		})
+		err = wait.PollUntilContextTimeout(testCtx.Ctx, time.Millisecond*20, wait.ForeverTestTimeout,
+			false, func(ctx context.Context) (bool, error) {
+				if !podScheduled(cs, pods[i].Namespace, pods[i].Name) {
+					return false, nil
+				}
+				return true, nil
+			})
 		if err != nil {
 			t.Fatal(err)
 		}

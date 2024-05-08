@@ -48,19 +48,20 @@ func TestCapacityScheduling(t *testing.T) {
 	testCtx.ClientSet = cs
 	testCtx.KubeConfig = globalKubeConfig
 
-	if err := wait.Poll(100*time.Millisecond, 3*time.Second, func() (done bool, err error) {
-		groupList, _, err := cs.ServerGroupsAndResources()
-		if err != nil {
-			return false, nil
-		}
-		for _, group := range groupList {
-			if group.Name == scheduling.GroupName {
-				t.Log("The CRD is ready to serve")
-				return true, nil
+	if err := wait.PollUntilContextTimeout(testCtx.Ctx, 100*time.Millisecond, 3*time.Second,
+		false, func(ctx context.Context) (done bool, err error) {
+			groupList, _, err := cs.ServerGroupsAndResources()
+			if err != nil {
+				return false, nil
 			}
-		}
-		return false, nil
-	}); err != nil {
+			for _, group := range groupList {
+				if group.Name == scheduling.GroupName {
+					t.Log("The CRD is ready to serve")
+					return true, nil
+				}
+			}
+			return false, nil
+		}); err != nil {
 		t.Fatalf("Timed out waiting for CRD to be ready: %v", err)
 	}
 
@@ -522,14 +523,15 @@ func TestCapacityScheduling(t *testing.T) {
 				}
 			}
 
-			if err := wait.Poll(time.Millisecond*200, 10*time.Second, func() (bool, error) {
-				for _, pod := range tt.existPods {
-					if !podScheduled(cs, pod.Namespace, pod.Name) {
-						return false, nil
+			if err := wait.PollUntilContextTimeout(testCtx.Ctx, time.Millisecond*200, 10*time.Second,
+				false, func(ctx context.Context) (bool, error) {
+					for _, pod := range tt.existPods {
+						if !podScheduled(cs, pod.Namespace, pod.Name) {
+							return false, nil
+						}
 					}
-				}
-				return true, nil
-			}); err != nil {
+					return true, nil
+				}); err != nil {
 				t.Fatalf("%v Waiting existPods created error: %v", tt.name, err.Error())
 			}
 
@@ -541,14 +543,15 @@ func TestCapacityScheduling(t *testing.T) {
 				}
 			}
 
-			if err := wait.Poll(time.Millisecond*200, 10*time.Second, func() (bool, error) {
-				for _, v := range tt.expectedPods {
-					if !podScheduled(cs, v.Namespace, v.Name) {
-						return false, nil
+			if err := wait.PollUntilContextTimeout(testCtx.Ctx, time.Millisecond*200, 10*time.Second,
+				false, func(ctx context.Context) (bool, error) {
+					for _, v := range tt.expectedPods {
+						if !podScheduled(cs, v.Namespace, v.Name) {
+							return false, nil
+						}
 					}
-				}
-				return true, nil
-			}); err != nil {
+					return true, nil
+				}); err != nil {
 				t.Fatalf("%v Waiting expectedPods error: %v", tt.name, err.Error())
 			}
 			t.Logf("Case %v finished", tt.name)

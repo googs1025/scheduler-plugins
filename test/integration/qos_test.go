@@ -124,13 +124,14 @@ func TestQOSPlugin(t *testing.T) {
 	defer cleanupPods(t, testCtx, pods)
 
 	// Wait for all Pods are in the scheduling queue.
-	err = wait.Poll(time.Millisecond*200, wait.ForeverTestTimeout, func() (bool, error) {
-		pendingPods, _ := testCtx.Scheduler.SchedulingQueue.PendingPods()
-		if len(pendingPods) == len(pods) {
-			return true, nil
-		}
-		return false, nil
-	})
+	err = wait.PollUntilContextTimeout(testCtx.Ctx, time.Millisecond*200, wait.ForeverTestTimeout,
+		false, func(ctx context.Context) (bool, error) {
+			pendingPods, _ := testCtx.Scheduler.SchedulingQueue.PendingPods()
+			if len(pendingPods) == len(pods) {
+				return true, nil
+			}
+			return false, nil
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
