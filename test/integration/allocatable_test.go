@@ -271,7 +271,7 @@ func TestAllocatablePlugin1(t *testing.T) {
 				},
 			})
 
-			ns := fmt.Sprintf("integration-test-allocatable-plugin-%v", string(uuid.NewUUID()))
+			ns := fmt.Sprintf("integration-test-%v", string(uuid.NewUUID()))
 			createNamespace(t, testCtx, ns)
 
 			testCtx = initTestSchedulerWithOptions(
