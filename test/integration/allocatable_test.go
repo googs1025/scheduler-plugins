@@ -198,7 +198,7 @@ func TestAllocatablePlugin1(t *testing.T) {
 		expectedNodes map[string]sets.Set[string] // pod name to expected node name mapping
 	}{
 		{
-			name: "least modeType",
+			name: "least modeType the small pods should land on the small nodes and the big pod should land on the big node",
 			pods: []*v1.Pod{
 				st.MakePod().Name("small-1").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
 				st.MakePod().Name("small-2").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
@@ -221,7 +221,7 @@ func TestAllocatablePlugin1(t *testing.T) {
 			modeType: schedconfig.Least,
 		},
 		{
-			name: "most modeType",
+			name: "most modeType the small pods should land on the big node and the big pod should land on the big node",
 			pods: []*v1.Pod{
 				st.MakePod().Name("small-1").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
 				st.MakePod().Name("small-2").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
@@ -268,6 +268,9 @@ func TestAllocatablePlugin1(t *testing.T) {
 				Name: noderesources.AllocatableName,
 				Args: &schedconfig.NodeResourcesAllocatableArgs{
 					Mode: tc.modeType,
+					Resources: []schedapi.ResourceSpec{
+						{Name: string(v1.ResourceMemory), Weight: 10},
+					},
 				},
 			})
 
@@ -294,7 +297,8 @@ func TestAllocatablePlugin1(t *testing.T) {
 
 			// Create the Pods.
 			for _, pod := range tc.pods {
-				pod.Namespace = ns
+				// set namespace to pods
+				pod.SetNamespace(ns)
 				_, err := cs.CoreV1().Pods(ns).Create(testCtx.Ctx, pod, metav1.CreateOptions{})
 				if err != nil {
 					t.Fatalf("Failed to create Pod %q: %v", pod.Name, err)
