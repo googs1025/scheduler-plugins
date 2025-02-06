@@ -200,11 +200,11 @@ func TestAllocatablePlugin1(t *testing.T) {
 		{
 			name: "least modeType",
 			pods: []*v1.Pod{
-				st.MakePod().Namespace("ns").Name("small-1").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("small-2").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("small-3").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("small-4").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("big-1").Container(imageutils.GetPauseImageName()).Req(bigPodReq).Obj(),
+				st.MakePod().Name("small-1").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("small-2").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("small-3").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("small-4").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("big-1").Container(imageutils.GetPauseImageName()).Req(bigPodReq).Obj(),
 			},
 			nodes: []*v1.Node{
 				st.MakeNode().Name("fake-node-small-1").Label("node", "fake-node-small-1").Capacity(smallNodeCapacity).Obj(),
@@ -223,11 +223,11 @@ func TestAllocatablePlugin1(t *testing.T) {
 		{
 			name: "most modeType",
 			pods: []*v1.Pod{
-				st.MakePod().Namespace("ns").Name("small-1").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("small-2").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("small-3").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("small-4").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
-				st.MakePod().Namespace("ns").Name("big-1").Container(imageutils.GetPauseImageName()).Req(bigPodReq).Obj(),
+				st.MakePod().Name("small-1").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("small-2").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("small-3").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("small-4").Container(imageutils.GetPauseImageName()).Req(smallPodReq).Obj(),
+				st.MakePod().Name("big-1").Container(imageutils.GetPauseImageName()).Req(bigPodReq).Obj(),
 			},
 			nodes: []*v1.Node{
 				st.MakeNode().Name("fake-node-small-1").Label("node", "fake-node-small-1").Capacity(smallNodeCapacity).Obj(),
@@ -294,6 +294,7 @@ func TestAllocatablePlugin1(t *testing.T) {
 
 			// Create the Pods.
 			for _, pod := range tc.pods {
+				pod.Namespace = ns
 				_, err := cs.CoreV1().Pods(ns).Create(testCtx.Ctx, pod, metav1.CreateOptions{})
 				if err != nil {
 					t.Fatalf("Failed to create Pod %q: %v", pod.Name, err)
